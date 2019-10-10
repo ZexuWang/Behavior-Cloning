@@ -1,125 +1,298 @@
-# Behavioral Cloning Project
 
-[![Udacity - Self-Driving Car NanoDegree](https://s3.amazonaws.com/udacity-sdc/github/shield-carnd.svg)](http://www.udacity.com/drive)
 
-Overview
----
-This repository contains starting files for the Behavioral Cloning Project.
+```python
+import tensorflow as tf
+import numpy as np
+import pandas as pd
+import random
+import os
+import cv2
+import csv
+import matplotlib.pyplot as plt
+from sklearn.utils import shuffle
+import matplotlib.image as mpimg
 
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to clone driving behavior. You will train, validate and test a model using Keras. The model will output a steering angle to an autonomous vehicle.
+from tensorflow.python.keras.models import Sequential, Model
+from tensorflow.python.keras.layers import Dense, Dropout, Activation, Flatten, BatchNormalization, merge, Input, BatchNormalization, Lambda
+from tensorflow.python.keras.layers import Convolution2D, MaxPooling2D, ZeroPadding2D, AveragePooling2D, GlobalAveragePooling2D
 
-We have provided a simulator where you can steer a car around a track for data collection. You'll use image data and steering angles to train a neural network and then use this model to drive the car autonomously around the track.
+print('Done with importing')
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Behavioral-Cloning-P3/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
 
-To meet specifications, the project will require submitting five files: 
-* model.py (script used to create and train the model)
-* drive.py (script to drive the car - feel free to modify this file)
-* model.h5 (a trained Keras model)
-* a report writeup file (either markdown or pdf)
-* video.mp4 (a video recording of your vehicle driving autonomously around the track for at least one full lap)
-
-This README file describes how to output the video in the "Details About Files In This Directory" section.
-
-Creating a Great Writeup
----
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/432/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
-
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
-
-The Project
----
-The goals / steps of this project are the following:
-* Use the simulator to collect data of good driving behavior 
-* Design, train and validate a model that predicts a steering angle from image data
-* Use the model to drive the vehicle autonomously around the first track in the simulator. The vehicle should remain on the road for an entire loop around the track.
-* Summarize the results with a written report
-
-### Dependencies
-This lab requires:
-
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
-
-The lab enviroment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
-
-The following resources can be found in this github repository:
-* drive.py
-* video.py
-* writeup_template.md
-
-The simulator can be downloaded from the classroom. In the classroom, we have also provided sample data that you can optionally use to help train your model.
-
-## Details About Files In This Directory
-
-### `drive.py`
-
-Usage of `drive.py` requires you have saved the trained model as an h5 file, i.e. `model.h5`. See the [Keras documentation](https://keras.io/getting-started/faq/#how-can-i-save-a-keras-model) for how to create this file using the following command:
-```sh
-model.save(filepath)
 ```
 
-Once the model has been saved, it can be used with drive.py using this command:
+    Done with importing
+    
 
-```sh
-python drive.py model.h5
+
+```python
+lines = []
+with open('./Desktop/img/driving_log.csv') as csvfile:
+    reader = csv.reader(csvfile)
+    for line in reader:
+        lines.append(line)
+
+
+        
+images = []
+for lin in lines:
+    source_path = line[0]
+    filename = source_path.split('/')[-1]
+    current_path = './Desktop/img/test/'+filename
+    image = mpimg.imread(current_path)
+    images.append(image)
+headers = ['center', 'left', 'right', 'angle', 'throttle', 'brake', 'speed' ]
+data = pd.read_csv('./Desktop/img/driving_log.csv',names=headers)
+data = np.array(data)
+
+X_train = np.array(images)
+y_train = data[:,3]
+hist = plt.hist(y_train,bins = 11)
+print(y_train.shape)
 ```
 
-The above command will load the trained model and use the model to make predictions on individual images in real-time and send the predicted angle back to the server via a websocket connection.
+    (4744,)
+    
 
-Note: There is known local system's setting issue with replacing "," with "." when using drive.py. When this happens it can make predicted steering values clipped to max/min values. If this occurs, a known fix for this is to add "export LANG=en_US.utf8" to the bashrc file.
 
-#### Saving a video of the autonomous agent
+![png](output_1_1.png)
 
-```sh
-python drive.py model.h5 run1
+
+
+```python
+[count, ang_range] = np.histogram(y_train,bins = 11)
+print(count)
+print(ang_range)
+n_classes = len(count)
+print(n_classes)
 ```
 
-The fourth argument, `run1`, is the directory in which to save the images seen by the agent. If the directory already exists, it'll be overwritten.
+    [  66   49   87  139  154 3969   74   71   63   28   44]
+    [-1.0 -0.8181818181818181 -0.6363636363636364 -0.4545454545454546
+     -0.2727272727272727 -0.09090909090909083 0.09090909090909083
+     0.2727272727272727 0.4545454545454546 0.6363636363636365
+     0.8181818181818183 1.0]
+    11
+    
 
-```sh
-ls run1
 
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_424.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_451.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_477.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_528.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_573.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_618.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_697.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_723.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_749.jpg
-[2017-01-09 16:10:23 EST]  12KiB 2017_01_09_21_10_23_817.jpg
-...
+```python
+X_high = []
+y_high = []
+X_low  = []
+y_low = []
+ang_low = -0.09090909090909083
+ang_high = 0.09090909090909083
+for idx in range(len(y_train)):
+    if ((y_train[idx]>ang_high)):
+        X_high.append(X_train[idx])
+        y_high.append(y_train[idx])
+
+        
+for idx in range(len(y_train)):
+    if ((y_train[idx]<ang_low)):
+        X_low.append(X_train[idx])
+        y_low.append(y_train[idx])
+
+X_high = np.array(X_high)
+y_high = np.array(y_high)
+X_low = np.array(X_low)
+y_low = np.array(y_low)
 ```
 
-The image file name is a timestamp of when the image was seen. This information is used by `video.py` to create a chronological video of the agent driving.
 
-### `video.py`
-
-```sh
-python video.py run1
+```python
+hist = plt.hist(y_high,bins = 11)
 ```
 
-Creates a video based on images found in the `run1` directory. The name of the video will be the name of the directory followed by `'.mp4'`, so, in this case the video will be `run1.mp4`.
 
-Optionally, one can specify the FPS (frames per second) of the video:
+![png](output_4_0.png)
 
-```sh
-python video.py run1 --fps 48
+
+
+```python
+hist = plt.hist(y_low,bins = 11)
 ```
 
-Will run the video at 48 FPS. The default FPS is 60.
 
-#### Why create a video
+![png](output_5_0.png)
 
-1. It's been noted the simulator might perform differently based on the hardware. So if your model drives succesfully on your machine it might not on another machine (your reviewer). Saving a video is a solid backup in case this happens.
-2. You could slightly alter the code in `drive.py` and/or `video.py` to create a video of what your model sees after the image is processed (may be helpful for debugging).
 
-### Tips
-- Please keep in mind that training images are loaded in BGR colorspace using cv2 while drive.py load images in RGB to predict the steering angles.
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+```python
+X_tab = np.concatenate((X_low,X_high),axis=0)
+y_tab = np.concatenate((y_low,y_high),axis=0)
+```
 
+
+```python
+# data augmentation
+def generate_img(img,ang,num):
+    for i in range(num):
+        img = np.concatenate((img,img),axis=0)
+        ang = np.concatenate((ang,ang),axis=0)
+        print(ang.shape)
+    return img, ang
+
+
+
+it_low = 4
+it_high = 5
+X_lownew, y_lownew = generate_img(X_low,y_low,it_low)
+X_highnew, y_highnew = generate_img(X_high,y_high,it_high)
+# X_aug = np.array(np.zeros((1, 160,320,3)))
+# y_aug = np.array([0])
+# for idx in range(len(y_tab)):
+#     print(idx)
+#     aug_img, aug_ang = aug_image(X_tab[idx],y_tab[idx],it)
+#     aug_img = np.array(aug_img)
+#     aug_ang = np.array(aug_ang)
+#     print(X_tab[idx].shape)
+#     print(aug_img.shape)
+#     image = np.concatenate((X_tab[idx],aug_img),axis=0)
+#     angle = np.concatenate((y_tab[idx],aug_ang),axis=0)
+# X_aug = np.concatenate((X_tab,image),axis=0)
+# y_aug = np.concatenate((y_tab,angle),axis=0)
+```
+
+    (990,)
+    (1980,)
+    (3960,)
+    (7920,)
+    (560,)
+    (1120,)
+    (2240,)
+    (4480,)
+    (8960,)
+    
+
+
+```python
+hist = plt.hist(y_lownew,bins = 11)
+```
+
+
+![png](output_8_0.png)
+
+
+
+```python
+hist = plt.hist(y_highnew,bins = 11)
+```
+
+
+![png](output_9_0.png)
+
+
+
+```python
+X_tabnew = np.concatenate((X_lownew,X_highnew),axis=0)
+y_tabnew = np.concatenate((y_lownew,y_highnew),axis=0)
+```
+
+
+```python
+X_aug = np.concatenate((X_train,X_tabnew),axis=0)
+y_aug = np.concatenate((y_train,y_tabnew),axis=0)
+hist = plt.hist(y_aug,bins = 11)
+```
+
+
+![png](output_11_0.png)
+
+
+
+```python
+y_aug.shape
+```
+
+
+
+
+    (21624,)
+
+
+
+
+```python
+img = []
+for i in range(X_train.shape[0]):
+    img.append(cv2.resize(X_train[i],(240,120),interpolation = cv2.INTER_AREA))
+img = np.array(img)
+print(img.shape)
+```
+
+    (4744, 120, 240, 3)
+    
+
+
+```python
+plt.imshow(img[1000])
+```
+
+
+
+
+    <matplotlib.image.AxesImage at 0x18b570c88d0>
+
+
+
+
+![png](output_14_1.png)
+
+
+
+```python
+plt.imshow(X_train[1000])
+```
+
+
+
+
+    <matplotlib.image.AxesImage at 0x18b56c671d0>
+
+
+
+
+![png](output_15_1.png)
+
+
+
+```python
+model = Sequential()
+model.add(Lambda(lambda x: x/255.0 -0.5, input_shape = (160,320,3)))
+model.add(Flatten())
+model.add(Dense(1))
+
+model.compile(loss = 'mse',optimizer='adam')
+model.fit(X_train,y_train,validation_split=0.2,shuffle = True,epochs=7)
+
+model.save('model.h5')
+```
+
+    Train on 3795 samples, validate on 949 samples
+    Epoch 1/7
+    3795/3795 [==============================] - 8s 2ms/step - loss: 15.9976 - val_loss: 0.0639
+    Epoch 2/7
+    3795/3795 [==============================] - 6s 2ms/step - loss: 0.0454 - val_loss: 0.0683
+    Epoch 3/7
+    3795/3795 [==============================] - 6s 2ms/step - loss: 0.0488 - val_loss: 0.0683
+    Epoch 4/7
+    3795/3795 [==============================] - 6s 2ms/step - loss: 0.0484 - val_loss: 0.0637
+    Epoch 5/7
+    3795/3795 [==============================] - 6s 1ms/step - loss: 0.0494 - val_loss: 0.0785
+    Epoch 6/7
+    3795/3795 [==============================] - 6s 2ms/step - loss: 0.0545 - val_loss: 0.0765
+    Epoch 7/7
+    3795/3795 [==============================] - 7s 2ms/step - loss: 0.0593 - val_loss: 0.0636
+    
+
+
+```python
+
+```
+
+
+```python
+
+```
