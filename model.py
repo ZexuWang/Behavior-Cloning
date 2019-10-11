@@ -19,6 +19,11 @@ from keras.layers.convolutional import Conv2D
 
 print('Done with importing')
 
+
+# def resize_img(img):
+#     img = cv2.resize(img,(139,139))
+#     return img
+
 lines = []
 with open('/home/workspace/img/driving_log.csv') as csvfile:
     reader = csv.reader(csvfile)
@@ -26,7 +31,7 @@ with open('/home/workspace/img/driving_log.csv') as csvfile:
         lines.append(line)
 # Extracting X_train and y_train        
 images = []
-for lin in lines:
+for line in lines:
     source_path = line[0]
     filename = source_path.split('/')[-1]
     current_path = '/home/workspace/img/test/'+filename
@@ -37,7 +42,10 @@ data = pd.read_csv('/home/workspace/img/driving_log.csv',names = headers)
 data = np.array(data)
 X_train = np.array(images)
 y_train = data[:,3]
-
+# X_process = []
+# for image in X_train:
+#     X_process.append(resize_img(image))
+# X_train = np.array(X_process)
 
 # data preprocessing
 
@@ -75,8 +83,8 @@ def generate_img(img,ang,num):
 
 
 
-it_low = 4 # num of iterations
-it_high = 5 # num of iterations
+it_low = 3 # num of iterations
+it_high = 4 # num of iterations
 X_lownew, y_lownew = generate_img(X_low,y_low,it_low)
 X_highnew, y_highnew = generate_img(X_high,y_high,it_high)
 
@@ -90,30 +98,52 @@ y_aug = np.concatenate((y_train,y_tabnew),axis=0)
 X_aug,y_aug = shuffle(X_aug,y_aug)
 X_train, X_valid, y_train, y_valid = train_test_split(X_aug,y_aug,random_state=0, test_size=0.2)
 
-# Model Archetecture of the neuro networks using transfer learning
+# Model Archetecture of the neuro networks 
 #from keras.applications.inception_v3 import InceptionV3
-from keras.applications.inception_v3 import InceptionV3
+# from keras.applications.inception_v3 import InceptionV3
 
 
-img_shape = (160,320,3)
+# # img_shape = (139,139,3)
+# img_shape = (160,320,3)
 
-# Tensor input
-tensor_input = Input(shape=(160,320,3))
-# resize the input using a lambda layer
-##resized_input = Lambda((lambda x: x/255.0 -0.5))(tensor_input)
+# # Tensor input
+# tensor_input = Input(shape=(160,320,3))
+# # resize the input using a lambda layer
+# ##resized_input = Lambda((lambda x: x/255.0 -0.5))(tensor_input)
 
-inception = InceptionV3(weights='imagenet', include_top=False,
-                        input_shape=img_shape)
+# inception = InceptionV3(weights='imagenet', include_top=False,
+#                         input_shape=img_shape)
 
-# Feeds the re-sized input into Inception Model
-x = inception.output
-x = Flatten()(x)
-x = Dense(2048, activation='relu')(x)
-x = Dense(1)(x)
+# for layer in inception.layers:
+#         layer.trainable = False
 
 
-model = Model(input=inception.input, output=x)
+# # Feeds the re-sized input into Inception Model
+# x = inception.output
+# x = Flatten()(x)
+# x = Dense(100, activation='relu')(x)
+# x = Dense(10, activation='relu')(x)
+# x = Dense(1)(x)
+
+
+# model = Model(input=inception.input, output=x)
+model = Sequential()
+model.add(Lambda(lambda x: x/255.0 - 0.5, input_shape=(160,320,3)))                              
+model.add(Conv2D(32,(5,5),activation = "relu", strides=(2,2)))
+model.add(Conv2D(64,(5,5),activation = "relu", strides=(2,2)))
+model.add(Conv2D(128,(5,5),activation = "relu", strides=(2,2)))
+model.add(Conv2D(64,(3,3),activation = "relu"))
+model.add(Conv2D(32,(3,3))) 
+model.add(Activation('relu'))
+model.add(Flatten())
+model.add(Dropout(0.5))
+model.add(Activation('relu'))
+model.add(Dense(100))
+model.add(Dense(50))
+model.add(Dense(10)) 
+model.add(Dense(1))  
+print(model.summary())
 model.compile(loss = 'mse',optimizer='adam')
-model.fit(X_train,y_train,epochs=3,validation_data=(X_valid,y_valid))
+model.fit(X_train,y_train,epochs=5,validation_data=(X_valid,y_valid))
 model.save('model.h5')
 print('model saved')
