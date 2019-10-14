@@ -109,7 +109,7 @@ To augment the data sat, I also have the second lane of driving but in differenc
 
 
 
-After the collection process, I had 4744 number of data points. I then augumented this data by copying the ones which non-zero angle steerings. Details of data augumentation can be found in behavior_cloning_script.ipynb.
+After the collection process, I had 4744 number of data points. I then augumented this data by copying the ones which non-zero angle steerings. Details of data augumentation can be found in behavior_cloning_script.html.
 
 
 I finally randomly shuffled the data set and put 20% of the data into a validation set. 
